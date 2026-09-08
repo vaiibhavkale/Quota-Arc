@@ -10,7 +10,17 @@ endif
 
 PROJECT := QuotaArc.xcodeproj
 SCHEME  := QuotaArc
-DEST    := platform=macOS,arch=arm64
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),arm64)
+DEST := platform=macOS,arch=arm64
+else
+DEST := platform=macOS,arch=x86_64
+endif
+
+# CI and Release disk images are Intel + Apple Silicon. A runner is one
+# architecture; without this, `generic/platform=macOS` ships only that one
+# and the other Macs cannot open the app.
+UNIVERSAL := ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO
 
 # Debug signs itself when the maintainer's Developer ID certificate isn't in
 # the keychain, which is every machine but the maintainer's — so a contributor
@@ -24,7 +34,9 @@ DEST    := platform=macOS,arch=arm64
 # nothing, so `ifeq (,...)` was never true and a machine *without* the
 # certificate fell through to signing with an identity it does not have —
 # "Signing for Quota Arc requires a development team", on every target.
-HAS_DEVELOPER_ID := $(shell security find-identity -v -p codesigning 2>/dev/null | grep "Developer ID Application")
+MAINTAINER_TEAM := 6WFPL8B9FB
+HAS_MAINTAINER_ID := $(shell security find-identity -v -p codesigning 2>/dev/null \
+	| grep "Developer ID Application" | grep "$(MAINTAINER_TEAM)")
 
 # A personal "Apple Development" certificate, where there is one, is preferred
 # over ad-hoc for exactly the reason the maintainer's identity is: it is
@@ -37,7 +49,7 @@ DEV_TEAM := $(shell security find-certificate -c "Apple Development" -p 2>/dev/n
 	| openssl x509 -noout -subject 2>/dev/null \
 	| sed -n 's/.*OU *= *\([A-Z0-9]*\).*/\1/p')
 
-ifeq (,$(HAS_DEVELOPER_ID))
+ifeq (,$(HAS_MAINTAINER_ID))
 ifeq (,$(DEV_TEAM))
 DEV_SIGN := CODE_SIGN_IDENTITY="-" DEVELOPMENT_TEAM="" CODE_SIGN_STYLE=Automatic
 else
@@ -81,9 +93,16 @@ dmg-ci: gen
 		-destination 'generic/platform=macOS' \
 		-configuration Release \
 		-derivedDataPath $(CI_DERIVED) \
+		$(UNIVERSAL) \
 		CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
 		build
 	test -d $(CI_DERIVED)/Build/Products/Release/$(APP_NAME).app
+	@BIN="$(CI_DERIVED)/Build/Products/Release/$(APP_NAME).app/Contents/MacOS/$(APP_NAME)"; \
+	test -f "$$BIN"; \
+	ARCHS_BUILT=$$(lipo -archs "$$BIN"); \
+	echo "binary archs: $$ARCHS_BUILT"; \
+	echo "$$ARCHS_BUILT" | grep -qw arm64; \
+	echo "$$ARCHS_BUILT" | grep -qw x86_64
 	cp -R $(CI_DERIVED)/Build/Products/Release/$(APP_NAME).app $(RELEASE_DIR)/stage/
 	ln -s /Applications $(RELEASE_DIR)/stage/Applications
 	rm -f $(DMG)
@@ -135,8 +154,10 @@ archive: gen
 	@# release leaves extra "Quota Arc" entries in app search next to the
 	@# real one in /Applications. This stops the whole tree being indexed.
 	@touch build/.metadata_never_index
-	xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(DEST)' \
-		-configuration Release -archivePath $(RELEASE_DIR)/$(APP_NAME).xcarchive archive
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) \
+		-destination 'generic/platform=macOS' \
+		-configuration Release -archivePath $(RELEASE_DIR)/$(APP_NAME).xcarchive \
+		$(UNIVERSAL) archive
 	printf '%s\n' \
 		'<?xml version="1.0" encoding="UTF-8"?>' \
 		'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \

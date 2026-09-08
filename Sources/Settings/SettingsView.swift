@@ -231,10 +231,9 @@ struct SettingsView: View {
         // The glass is what gives the card an edge and a lift of its own, so
         // there is no border drawn on top of it.
         .background {
-            Color.clear.glassEffect(
-                .regular,
-                in: RoundedRectangle(cornerRadius: SettingsView.sidebarCornerRadius,
-                                     style: .continuous)
+            SettingsGlassBackground(
+                shape: RoundedRectangle(cornerRadius: SettingsView.sidebarCornerRadius,
+                                        style: .continuous)
             )
         }
         .padding(SettingsView.sidebarInset)
@@ -266,7 +265,7 @@ struct SettingsView: View {
                 .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(.primary)
                 .frame(width: 36, height: 36)
-                .background { Color.clear.glassEffect(.regular, in: Circle()) }
+                .background { SettingsGlassBackground(shape: Circle()) }
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -1289,4 +1288,17 @@ private struct AccountRow: View {
         )
     }
 
+}
+
+/// Liquid Glass on macOS 26+, regular material on earlier releases.
+private struct SettingsGlassBackground<S: Shape>: View {
+    let shape: S
+
+    var body: some View {
+        if #available(macOS 26.0, *) {
+            Color.clear.glassEffect(.regular, in: shape)
+        } else {
+            shape.fill(.regularMaterial)
+        }
+    }
 }

@@ -320,6 +320,19 @@ final class RefreshScheduleTests: XCTestCase {
             idleInterval: idle
         ))
     }
+
+    /// Hovering must not wait out the 15s floor while a ring still has nothing
+    /// to show. That floor is what left Claude on "Waiting for the first
+    /// reading..." after a failed first poll.
+    @MainActor
+    func testUnfoldRefreshesImmediatelyWhenARingHasNoReading() {
+        XCTAssertTrue(UsageStore.shouldRefreshOnUnfold(
+            sinceLastAttempt: 0, minSeconds: 15, awaitingFirstReading: true))
+        XCTAssertFalse(UsageStore.shouldRefreshOnUnfold(
+            sinceLastAttempt: 0, minSeconds: 15, awaitingFirstReading: false))
+        XCTAssertTrue(UsageStore.shouldRefreshOnUnfold(
+            sinceLastAttempt: 15, minSeconds: 15, awaitingFirstReading: false))
+    }
 }
 
 /// Some failures say something about the account rather than about the network.

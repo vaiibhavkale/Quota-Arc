@@ -2,7 +2,7 @@ name: QuotaArc
 options:
   bundleIdPrefix: com.vaibhavkale
   deploymentTarget:
-    macOS: "26.0"
+    macOS: "15.0"
   createIntermediateGroups: true
 
 settings:
@@ -13,8 +13,8 @@ settings:
     # Sources/Info.plist reads both from here — hardcoding them there instead
     # silently pins every build to one version, so no customer ever sees an
     # update. Bump CURRENT_PROJECT_VERSION on every release.
-    MARKETING_VERSION: "1.6.1"
-    CURRENT_PROJECT_VERSION: "9"
+    MARKETING_VERSION: "1.6.2"
+    CURRENT_PROJECT_VERSION: "10"
     # Signed with a stable identity on purpose. The app reads Claude Code's
     # OAuth token out of the login keychain, and the keychain's ACL remembers
     # *which signed binary* was allowed. Ad-hoc or unsigned builds get a new
@@ -33,6 +33,12 @@ settings:
     ENABLE_HARDENED_RUNTIME: "YES"
     ENABLE_APP_SANDBOX: "NO"
     ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+  configs:
+    Release:
+      # One binary for Apple Silicon and Intel. Debug stays host-only so
+      # `make run` on a contributor machine is not a fat build.
+      ONLY_ACTIVE_ARCH: "NO"
+      ARCHS: "arm64 x86_64"
 
 packages:
   Sparkle:
@@ -56,7 +62,7 @@ targets:
         # and no obvious way to reach settings or quit.
         CFBundleName: Quota Arc
         CFBundleDisplayName: Quota Arc
-        LSMinimumSystemVersion: "26.0"
+        LSMinimumSystemVersion: "15.0"
         # Sources/Info.plist is *generated* from this block, so editing that
         # file directly is undone by the next `make gen`. Pointing both at the
         # build settings keeps one place to bump.

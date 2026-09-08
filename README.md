@@ -3,7 +3,7 @@
 # Quota Arc
 
 [![CI](https://github.com/vaiibhavkale/Quota-Arc/actions/workflows/ci.yml/badge.svg)](https://github.com/vaiibhavkale/Quota-Arc/actions/workflows/ci.yml)
-![Platform](https://img.shields.io/badge/platform-macOS%2026%2B%20%7C%20Windows%2010%2B-black)
+![Platform](https://img.shields.io/badge/platform-macOS%2015%2B%20%7C%20Windows%2010%2B-black)
 ![Swift](https://img.shields.io/badge/swift-5-orange)
 ![.NET](https://img.shields.io/badge/.NET-8-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -36,9 +36,9 @@ session announcements) is included. Hovering the notch re-reads live usage.
 Every push to `main` builds the Windows installer, the Mac disk image, and
 publishes both on [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases):
 
-- Windows installer: `QuotaArc-1.6.1.msi`
-- Windows portable: `QuotaArc-1.6.1-portable-win-x64.zip`
-- Mac disk image: `QuotaArc-1.6.1.dmg`
+- Windows installer: `QuotaArc-1.6.2.msi`
+- Windows portable: `QuotaArc-1.6.2-portable-win-x64.zip`
+- Mac disk image: `QuotaArc-1.6.2.dmg` (universal: Apple Silicon and Intel)
 
 See [`windows/README.md`](windows/README.md) for local build and install steps.
 

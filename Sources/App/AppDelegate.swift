@@ -21,6 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// user coming back from Cursor or Claude, which is when the cached token
     /// is the one that is wrong.
     private var hasBecomeActive = false
+    /// Claude Desktop writes plan percentages to disk; watching that file is
+    /// how the Windows app keeps the ring current without waiting for a poll.
+    private var claudeHistoryMonitor: ClaudeDesktopHistoryMonitor?
 
     /// The unit bundle is hosted by this app, so `xcodebuild test` launches it
     /// for real. Without this guard every test run put a live request on the
@@ -244,7 +247,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             store.start()
             fleet.onRefresh = { [weak store] in store?.refreshNow() }
             fleet.onRefreshProvider = { [weak store] id in store?.refresh(providerID: id) }
-            fleet.onUnfold = { [weak store] in store?.refreshIfStale() }
+            fleet.onUnfold = { [weak store] in
+                // Claude Desktop's history is local and cheap. Re-read it on
+                // every unfold so the ring matches what Windows does when the
+                // notch opens, rather than serving a 15s-old poll.
+                store?.refresh(providerID: ClaudeProfile.defaultID)
+                store?.refreshIfStale()
+            }
+            let claudeHistory = ClaudeDesktopHistoryMonitor()
+            claudeHistory.onChange = { [weak store] in
+                store?.refresh(providerID: ClaudeProfile.defaultID)
+            }
+            claudeHistory.start()
+            self.claudeHistoryMonitor = claudeHistory
             store.$refreshing
                 .receive(on: RunLoop.main)
                 .sink { [weak fleet] ids in fleet?.setRefreshing(ids) }
@@ -361,6 +376,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// those apps, and a cached token would keep showing the previous one.
     func applicationShouldHandleReopen(_ sender: NSApplication,
                                        hasVisibleWindows: Bool) -> Bool {
+        store?.refreshNow()
         settings?.show()
         return true
     }
@@ -380,6 +396,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         store?.stop()
+        claudeHistoryMonitor?.stop()
         monitors.values.forEach { $0.stop() }
         notchFleet?.stop()
     }

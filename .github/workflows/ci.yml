@@ -119,7 +119,7 @@ jobs:
 
           - **QuotaArc-${VERSION}.msi** - Windows installer. Installing again replaces the copy already on the machine.
           - **QuotaArc-${VERSION}-portable-win-x64.zip** - Windows portable. Unzip and run QuotaArc.exe.
-          - **QuotaArc-${VERSION}.dmg** - Mac disk image. Drag Quota Arc to Applications.
+          - **QuotaArc-${VERSION}.dmg** - Mac disk image (universal: Apple Silicon and Intel). Drag Quota Arc to Applications.
 
           Built from \`${sha}\` on \`main\`.
           EOF

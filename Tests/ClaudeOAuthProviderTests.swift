@@ -89,7 +89,8 @@ final class ClaudeOAuthProviderTests: XCTestCase {
 
     private func makeProvider(source: CredentialSource,
                               cli: ClaudeUsageCLI? = nil,
-                              cliRefreshInterval: TimeInterval = 5 * 60) -> ClaudeOAuthProvider {
+                              cliRefreshInterval: TimeInterval = 5 * 60,
+                              desktop: ProviderSnapshot? = nil) -> ClaudeOAuthProvider {
         // A private defaults suite per test: the archive persists the 429 back-off
         // deadline, and a leaked one would silently skip fetches in the next test.
         let name = "ClaudeOAuthProviderTests.\(UUID().uuidString)"
@@ -105,7 +106,8 @@ final class ClaudeOAuthProviderTests: XCTestCase {
                                    archive: UsageArchive(defaults: defaults),
                                    loadCredentials: { try source.read() },
                                    cli: cli,
-                                   cliRefreshInterval: cliRefreshInterval)
+                                   cliRefreshInterval: cliRefreshInterval,
+                                   loadDesktopSnapshot: { desktop })
     }
 
     // MARK: - The CLI path
@@ -170,6 +172,54 @@ final class ClaudeOAuthProviderTests: XCTestCase {
         _ = try await provider.fetchSnapshot()
 
         XCTAssertEqual(spawns.value, 2)
+    }
+
+    /// Desktop's history file is what Windows already reads. An expired token
+    /// must not leave the ring empty when those numbers are sitting on disk.
+    func testDesktopHistoryFillsTheRingWhenTheTokenCannot() async throws {
+        StubEndpoint.reset([.init(status: 401)])
+        let source = CredentialSource(readable: true)
+        let desktop = Self.desktopSnapshot(session: 0.23, weekly: 0.14)
+        let provider = makeProvider(
+            source: source,
+            cli: Self.cli(answering: "Please run /login first"),
+            desktop: desktop
+        )
+
+        let snapshot = try await provider.fetchSnapshot()
+
+        XCTAssertEqual(snapshot.status, .ok)
+        XCTAssertEqual(snapshot.windows.map(\.id), ["session", "weekly_all"])
+        XCTAssertEqual(snapshot.windows[0].usedFraction!, 0.23, accuracy: 0.0001)
+        XCTAssertEqual(source.reads, 0, "the keychain was asked even though Desktop had a reading")
+        XCTAssertEqual(StubEndpoint.requestCount, 0, "the endpoint was called even though Desktop had a reading")
+    }
+
+    /// Spawning `claude /usage` takes up to 20s. Windows never waits that long
+    /// when the history file is there, and neither should Mac.
+    func testDesktopHistoryMeansTheCLIIsNotSpawned() async throws {
+        let spawns = Counter()
+        let provider = makeProvider(
+            source: CredentialSource(readable: true),
+            cli: Self.cli { spawns.increment(); return Self.cliUsage },
+            desktop: Self.desktopSnapshot(session: 0.09, weekly: 0.11)
+        )
+
+        _ = try await provider.fetchSnapshot()
+
+        XCTAssertEqual(spawns.value, 0)
+    }
+
+    private static func desktopSnapshot(session: Double, weekly: Double) -> ProviderSnapshot {
+        ProviderSnapshot(
+            id: "claude", displayName: "Claude", glyph: .claude,
+            fidelity: .official, status: .ok,
+            windows: [
+                LimitWindow(id: "session", label: "Current session", usedFraction: session),
+                LimitWindow(id: "weekly_all", label: "All models", usedFraction: weekly)
+            ],
+            headlineID: "session"
+        )
     }
 
     private static let cliUsage = """

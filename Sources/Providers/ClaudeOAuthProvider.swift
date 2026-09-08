@@ -60,13 +60,19 @@ actor ClaudeOAuthProvider: UsageProvider {
     /// Stamped on every spawn, successful or not. Without it a Claude Code that
     /// is installed but signed out costs a process on every tick, forever.
     private var lastCLIAttempt: Date?
+    /// Claude Desktop's on-disk history for the default profile. Injected so a
+    /// test can pin the fallback without reading the machine's real file, which
+    /// would make every token-path assertion depend on whether Desktop is
+    /// installed.
+    private let loadDesktopSnapshot: @Sendable () -> ProviderSnapshot?
 
     init(profile: ClaudeProfile = .default(),
          session: URLSession = .shared,
          archive: UsageArchive = UsageArchive(),
          loadCredentials: (@Sendable () throws -> ClaudeCredentials)? = nil,
          cli: ClaudeUsageCLI? = ClaudeUsageCLI.locate(),
-         cliRefreshInterval: TimeInterval = 5 * 60) {
+         cliRefreshInterval: TimeInterval = 5 * 60,
+         loadDesktopSnapshot: (@Sendable () -> ProviderSnapshot?)? = nil) {
         self.cli = cli
         self.cliRefreshInterval = cliRefreshInterval
         self.profile = profile
@@ -80,28 +86,41 @@ actor ClaudeOAuthProvider: UsageProvider {
         // Pick the back-off back up where the last run left it, so relaunching
         // during a penalty does not spend an attempt extending it.
         self.retryNoEarlierThan = archive.loadBackoffUntil(providerID: profile.id)
+        if let loadDesktopSnapshot {
+            self.loadDesktopSnapshot = loadDesktopSnapshot
+        } else if profile.slug == nil {
+            let name = profile.displayName
+            self.loadDesktopSnapshot = { ClaudeDesktop.snapshotFromHistory(displayName: name) }
+        } else {
+            self.loadDesktopSnapshot = { nil }
+        }
     }
 
     func fetchSnapshot() async throws -> ProviderSnapshot {
-        // Ahead of the back-off check on purpose. That deadline is the
-        // endpoint's, and the CLI does not share the endpoint's rate limit —
-        // there is no reason for a 429 on one to darken a ring the other can
-        // still fill.
-        if let windows = await cliWindows() {
-            return ProviderSnapshot(
-                id: id,
-                displayName: displayName,
-                glyph: glyph,
-                fidelity: .official,
-                status: .ok,
-                windows: windows,
-                headlineID: "session"
-            )
+        let local = loadDesktopSnapshot()
+
+        // Desktop's history is the same percentages the settings page shows,
+        // and needs no keychain. The Windows app already returns it whenever
+        // the token path cannot. On Mac it has to win *before* spawning
+        // `claude /usage`: that process takes up to 20s, and an expired token
+        // afterwards left the ring on "Waiting for the first reading..." while
+        // the numbers were already in the history file.
+        if local == nil, let windows = await cliWindows() {
+            return officialSnapshot(windows: windows)
         }
         if let retryNoEarlierThan, retryNoEarlierThan > Date() {
+            if let local { return local }
             let remaining = retryNoEarlierThan.timeIntervalSinceNow
             Log.usage.debug("skipping fetch, backing off for \(remaining, format: .fixed(precision: 0))s")
             throw UsageProviderError.rateLimited(retryAfter: remaining)
+        }
+        // A Desktop reading is enough to draw the ring. Asking the keychain
+        // for a token that may be expired would put a prompt in front of a
+        // number we already have, which is the interruption this fallback
+        // exists to avoid. A token already in hand can still replace it.
+        if let local, credentials == nil {
+            Log.usage.debug("\(self.id, privacy: .public): using Claude Desktop history")
+            return local
         }
         do {
             let snapshot = try await fetch(retryingOnUnauthorized: true)
@@ -114,13 +133,15 @@ actor ClaudeOAuthProvider: UsageProvider {
             // `CredentialCache`'s job and it already does it correctly: it
             // waits on the item's modification date rather than on a clock, so
             // a token Claude Code has just rotated is picked up at once. A
-            // second timer here could only ever be wrong — and was: it stamped
+            // second timer here could only ever be wrong - and was: it stamped
             // itself on every failed tick, so its own window never expired and
             // the keychain was never read again.
             credentials = nil
+            if let local { return local }
             throw UsageProviderError.needsAuth
         } catch UsageProviderError.credentialExpired {
             credentials = nil
+            if let local { return local }
             throw UsageProviderError.credentialExpired
         } catch let error as UsageProviderError {
             if case .rateLimited(let retryAfter) = error {
@@ -129,8 +150,24 @@ actor ClaudeOAuthProvider: UsageProvider {
                 archive.saveBackoffUntil(retryNoEarlierThan, providerID: id)
                 Log.usage.notice("rate limited (\(self.consecutiveRateLimits)x), next attempt in \(retryAfter, format: .fixed(precision: 0))s")
             }
+            if let local { return local }
+            throw error
+        } catch {
+            if let local { return local }
             throw error
         }
+    }
+
+    private func officialSnapshot(windows: [LimitWindow]) -> ProviderSnapshot {
+        ProviderSnapshot(
+            id: id,
+            displayName: displayName,
+            glyph: glyph,
+            fidelity: .official,
+            status: .ok,
+            windows: windows,
+            headlineID: "session"
+        )
     }
 
     /// What `claude "/usage"` last said, or nil to mean "use the token path".
@@ -172,6 +209,8 @@ actor ClaudeOAuthProvider: UsageProvider {
         var request = URLRequest(url: endpoint)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 15
 
         Log.usage.debug("GET /api/oauth/usage")

@@ -237,12 +237,30 @@ final class UsageStore: ObservableObject {
     /// Hovering is the moment the numbers on screen are about to be looked at,
     /// so a quiet idle interval must not leave yesterday's reading sitting
     /// there. The floor stops a parked pointer from spending the rate-limit
-    /// budget on every hover flicker.
+    /// budget on every hover flicker. A ring that still has no reading at all
+    /// skips the floor: there is nothing to protect, and waiting 15s is how
+    /// Claude stayed on "Waiting for the first reading..." after a failed
+    /// first attempt.
     func refreshIfStale(minSeconds: TimeInterval = 15) {
-        if let last = lastAttempt, Date().timeIntervalSince(last) < minSeconds {
+        let awaitingFirst = snapshots.contains {
+            !$0.hasReading && !disconnected.contains($0.id)
+        }
+        if !Self.shouldRefreshOnUnfold(
+            sinceLastAttempt: lastAttempt.map { Date().timeIntervalSince($0) } ?? .greatestFiniteMagnitude,
+            minSeconds: minSeconds,
+            awaitingFirstReading: awaitingFirst
+        ) {
             return
         }
         refreshNow()
+    }
+
+    static func shouldRefreshOnUnfold(
+        sinceLastAttempt: TimeInterval,
+        minSeconds: TimeInterval,
+        awaitingFirstReading: Bool
+    ) -> Bool {
+        awaitingFirstReading || sinceLastAttempt >= minSeconds
     }
 
     func refresh() async {

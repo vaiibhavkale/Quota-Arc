@@ -31,6 +31,27 @@ struct ReleaseNote: Equatable {
 enum ReleaseNotes {
     static let all: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.6.2",
+            headline: "A universal Mac build, and Claude readings that match Windows.",
+            changes: [
+                ReleaseNote.Change(
+                    title: "One Mac disk image for Intel and Apple Silicon",
+                    detail: "The GitHub Release dmg is a universal binary, so "
+                          + "the same download runs on both chips."
+                ),
+                ReleaseNote.Change(
+                    title: "Claude fills in as soon as the notch opens",
+                    detail: "Readings come from Claude Desktop's local history "
+                          + "when the token is stale, the same source Windows uses."
+                ),
+                ReleaseNote.Change(
+                    title: "Claude shows when each window resets",
+                    detail: "The tooltip names the reset time, not just "
+                          + "Resetting, matching Cursor and Codex."
+                ),
+            ]
+        ),
+        ReleaseNote(
             version: "1.6.1",
             headline: "Windows, and a Mac disk image on every GitHub Release.",
             changes: [
