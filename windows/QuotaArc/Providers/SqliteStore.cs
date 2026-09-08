@@ -37,4 +37,19 @@ internal static class SqliteStore
         var value = cmd.ExecuteScalar();
         return value as string ?? value?.ToString();
     }
+
+    /// The multi-row counterpart to `Scalar`, for a query that returns one
+    /// text column per row — `composerHeaders.value`, in practice.
+    public static List<string> Rows(SqliteConnection db, string sql)
+    {
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = sql;
+        using var reader = cmd.ExecuteReader();
+        var values = new List<string>();
+        while (reader.Read())
+        {
+            if (!reader.IsDBNull(0)) values.Add(reader.GetString(0));
+        }
+        return values;
+    }
 }

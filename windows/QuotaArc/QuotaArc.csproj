@@ -11,10 +11,10 @@
     <ApplicationIcon>..\..\assets\windows\QuotaArc.ico</ApplicationIcon>
     <RootNamespace>QuotaArc</RootNamespace>
     <AssemblyName>QuotaArc</AssemblyName>
-    <Version>1.6.3</Version>
-    <FileVersion>1.6.3.0</FileVersion>
-    <AssemblyVersion>1.6.3.0</AssemblyVersion>
-    <InformationalVersion>1.6.3</InformationalVersion>
+    <Version>1.6.4</Version>
+    <FileVersion>1.6.4.0</FileVersion>
+    <AssemblyVersion>1.6.4.0</AssemblyVersion>
+    <InformationalVersion>1.6.4</InformationalVersion>
     <Authors>Vaibhav</Authors>
     <Company>Vaibhav</Company>
     <Product>Quota Arc</Product>

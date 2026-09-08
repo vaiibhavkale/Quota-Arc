@@ -31,6 +31,20 @@ struct ReleaseNote: Equatable {
 enum ReleaseNotes {
     static let all: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.6.4",
+            headline: "Windows: Cursor's ring only spins when Cursor is actually working.",
+            changes: [
+                ReleaseNote.Change(
+                    title: "Cursor stops reading as busy just because it's open",
+                    detail: "The ring used to spin for as long as Cursor.exe was "
+                          + "running, whether or not a chat was doing anything. It "
+                          + "now reads the editor's own composer state, the same "
+                          + "way Mac does, so it only spins while a run is "
+                          + "genuinely in flight."
+                ),
+            ]
+        ),
+        ReleaseNote(
             version: "1.6.3",
             headline: "Claude readings stay live after the first one, and updates check this repo.",
             changes: [

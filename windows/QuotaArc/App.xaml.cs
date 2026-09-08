@@ -186,7 +186,13 @@ public partial class App : Application
                 var dir = profile.SessionsDirectory;
                 _monitors[profile.Id] = () => ClaudeSessionMonitor.Read(dir);
             }
-            _monitors["cursor"] = () => ProcessActivityMonitor.IfRunning("cursor", "Cursor", "Cursor", "cursor");
+            // Not ProcessActivityMonitor: that reported every session busy for
+            // as long as Cursor.exe existed, which is why the ring spun
+            // continuously with nothing actually running. This reads the same
+            // composerHeaders rows Mac does, so a session only counts while a
+            // run is genuinely in flight.
+            _monitors["cursor"] = () => CursorActivityMonitor.Read(
+                CursorCredentials.StorePath, CursorActivityMonitor.CursorLaunchDate(), TimeSpan.FromMinutes(15));
             _monitors["codex"] = () => ProcessActivityMonitor.IfRunning("codex", "Codex", "codex");
             _monitors["gemini"] = () => ProcessActivityMonitor.IfRunning("gemini", "Antigravity", "Antigravity", "antigravity");
             store.IsBusy = () => _monitors.Values.SelectMany(m => m()).Any(s => s.State == AgentState.Busy);

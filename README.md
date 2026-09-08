@@ -36,9 +36,9 @@ session announcements) is included. Hovering the notch re-reads live usage.
 Every push to `main` builds the Windows installer, the Mac disk image, and
 publishes both on [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases):
 
-- Windows installer: `QuotaArc-1.6.3.msi`
-- Windows portable: `QuotaArc-1.6.3-portable-win-x64.zip`
-- Mac disk image: `QuotaArc-1.6.3.dmg` (universal: Apple Silicon and Intel)
+- Windows installer: `QuotaArc-1.6.4.msi`
+- Windows portable: `QuotaArc-1.6.4-portable-win-x64.zip`
+- Mac disk image: `QuotaArc-1.6.4.dmg` (universal: Apple Silicon and Intel)
 
 See [`windows/README.md`](windows/README.md) for local build and install steps.
 
