@@ -249,4 +249,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE) © 2026 Vinz, Quota Arc Windows © 2026 Vaibhav
+[MIT](LICENSE) © 2026 Vaibhav

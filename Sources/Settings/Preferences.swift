@@ -228,7 +228,7 @@ final class Preferences: ObservableObject {
     /// the notch's mode, the archived readings, all apparently lost. Copying
     /// the old domain across once is the difference between a rename and what
     /// looks like a reset.
-    private static let previousDomains = [
+    nonisolated private static let previousDomains = [
         "com.vinz.codenotch",
         "com.vinz.usagenotch",
     ]

@@ -31,6 +31,27 @@ struct ReleaseNote: Equatable {
 enum ReleaseNotes {
     static let all: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.6.1",
+            headline: "Windows, and a Mac disk image on every GitHub Release.",
+            changes: [
+                ReleaseNote.Change(
+                    title: "Quota Arc on Windows",
+                    detail: "The same live usage notch as on the Mac, as an "
+                          + "installer and a portable build."
+                ),
+                ReleaseNote.Change(
+                    title: "A Mac disk image on GitHub Releases",
+                    detail: "Every push to main publishes QuotaArc.dmg beside "
+                          + "the Windows builds."
+                ),
+                ReleaseNote.Change(
+                    title: "Settings survive the new name",
+                    detail: "Connection choices and notch settings copy across "
+                          + "from an earlier install on first launch."
+                ),
+            ]
+        ),
+        ReleaseNote(
             version: "1.6.0",
             headline: "Reorder the rings, pick a display, and get told when a limit is close.",
             changes: [
