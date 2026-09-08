@@ -197,55 +197,67 @@ notarize: dmg
 # Sparkle ships its tools inside the resolved package artifacts.
 SPARKLE_BIN = $(shell dirname $$(find $$HOME/Library/Developer/Xcode/DerivedData/QuotaArc-*/SourcePackages/artifacts/sparkle -name generate_appcast 2>/dev/null | head -1))
 
+VERSION := $(shell awk -F'"' '/MARKETING_VERSION:/ {print $$2}' project.yml)
+TAG     ?= v$(VERSION)
+
 # The feed customers' copies poll. Signs each update with the EdDSA private key
 # in the login keychain — Sparkle installs nothing that key did not sign, so a
 # compromised host cannot push code.
 #
-# Writes into docs/, which GitHub Pages serves. The dmg goes there too, so the
-# URL the appcast advertises is the one the file actually sits at — a mismatch
-# is the usual reason an update downloads and then fails to verify.
-# NOT docs/ — that holds the design frames and specs, and GitHub Pages serves
-# whatever it is pointed at. Publishing from there would put the whole design
-# history on the public web alongside the download.
+# `site/` is scratch space for generate_appcast, not a publish target: it needs
+# a copy of the dmg on disk beside appcast.xml to read its size and compute the
+# signature, but the dmg itself ships as a GitHub Release asset (see
+# `publish`), not committed here — checking a multi-megabyte binary into git
+# for every release would only grow the repo forever.
 PAGES_DIR := site
-# Where the dmg actually sits. The enclosure URL the appcast advertises has to
-# match it exactly, or an update downloads and then fails to verify.
-DOWNLOAD_PREFIX := https://hivinz.com/
+# Where the dmg will actually sit once `make publish` uploads it: this repo's
+# release tagged $(TAG). The enclosure URL the appcast advertises has to match
+# that exactly, or an update downloads and then fails to verify. Named to
+# match what CI's own release job uploads (QuotaArc-<version>.dmg), so a feed
+# pointed at a CI-built release resolves too.
+DOWNLOAD_PREFIX := https://github.com/vaiibhavkale/Quota-Arc/releases/download/$(TAG)/
+VERSIONED_DMG := $(PAGES_DIR)/$(APP_NAME)-$(VERSION).dmg
 
 appcast: $(DMG)
 	@test -n "$(SPARKLE_BIN)" || (echo "Sparkle tools not found — run make build first" && exit 1)
 	mkdir -p $(PAGES_DIR)
 	@# Rebuilt from what is actually in the folder, never merged into the old
-	@# one. The dmg keeps a constant name, so only one build can exist at a
-	@# time — but generate_appcast preserves entries it already knows, and left
-	@# the previous version advertised at a URL now serving a different file,
-	@# with a signature that could never verify.
-	rm -f $(PAGES_DIR)/appcast.xml
-	cp $(DMG) $(PAGES_DIR)/
+	@# one. Only one dmg is ever in here at a time — left over, a previous
+	@# version stays advertised at a URL now serving a different file, with a
+	@# signature that could never verify.
+	rm -f $(PAGES_DIR)/appcast.xml $(PAGES_DIR)/*.dmg
+	cp $(DMG) $(VERSIONED_DMG)
 	$(SPARKLE_BIN)/generate_appcast $(PAGES_DIR) --download-url-prefix $(DOWNLOAD_PREFIX)
-	@echo "Publish by committing $(PAGES_DIR)/ and pushing."
+	rm -f $(VERSIONED_DMG)
+	@echo "Generated $(PAGES_DIR)/appcast.xml — run 'make publish' to attach it to $(TAG)."
 
 release: notarize verify-release appcast
 	@echo "Notarized: $(DMG)"
 
 # The GitHub release page is where someone who has never installed the app
-# looks first; the appcast feed is only ever read by copies already running.
-# The same notarized dmg belongs in both, and until it was in both the release
-# pages carried no assets at all — leaving a full Xcode install as the only way
-# to try the app.
+# looks first, and now where every installed copy checks too: SUFeedURL is
+# `.../releases/latest/download/appcast.xml`, so this upload *is* the update
+# check resolving. The same notarized dmg belongs in both the download button
+# and the enclosure this attaches, or a mismatch is the usual reason an update
+# downloads and then fails to verify.
 #
 # Deliberately not part of `release`: every other target here is local, and
 # this one writes to the remote. Run it once `make release` has finished and
 # the tag exists.
-VERSION := $(shell awk -F'"' '/MARKETING_VERSION:/ {print $$2}' project.yml)
-TAG     ?= v$(VERSION)
-
 publish: $(DMG)
 	@test -n "$(VERSION)" || (echo "No MARKETING_VERSION in project.yml" && exit 1)
+	mkdir -p $(PAGES_DIR)
+	cp $(DMG) $(VERSIONED_DMG)
 	@# --clobber so re-running after a rebuild replaces the asset instead of
 	@# failing on the name already being taken.
-	gh release upload $(TAG) $(DMG) --clobber
-	@echo "Attached $(DMG) to $(TAG)."
+	gh release upload $(TAG) $(VERSIONED_DMG) --clobber
+	@if [ -f $(PAGES_DIR)/appcast.xml ]; then \
+		gh release upload $(TAG) $(PAGES_DIR)/appcast.xml --clobber; \
+		echo "Attached $(VERSIONED_DMG) and appcast.xml to $(TAG)."; \
+	else \
+		echo "Attached $(VERSIONED_DMG) to $(TAG). Run 'make appcast' first to publish the update feed too."; \
+	fi
+	rm -f $(VERSIONED_DMG)
 
 # What Gatekeeper on a customer's Mac will check. `spctl` accepting the app is
 # the actual proof that the download will open without a right-click.

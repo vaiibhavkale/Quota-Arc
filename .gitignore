@@ -7,3 +7,6 @@ DerivedData/
 xcuserdata/
 *.xcuserstate
 .swiftpm/
+# Scratch space for `make appcast` — the dmg and appcast.xml it builds ship as
+# GitHub Release assets (see Makefile's `publish`), never committed here.
+/site/

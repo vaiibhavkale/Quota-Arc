@@ -36,9 +36,9 @@ session announcements) is included. Hovering the notch re-reads live usage.
 Every push to `main` builds the Windows installer, the Mac disk image, and
 publishes both on [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases):
 
-- Windows installer: `QuotaArc-1.6.2.msi`
-- Windows portable: `QuotaArc-1.6.2-portable-win-x64.zip`
-- Mac disk image: `QuotaArc-1.6.2.dmg` (universal: Apple Silicon and Intel)
+- Windows installer: `QuotaArc-1.6.3.msi`
+- Windows portable: `QuotaArc-1.6.3-portable-win-x64.zip`
+- Mac disk image: `QuotaArc-1.6.3.dmg` (universal: Apple Silicon and Intel)
 
 See [`windows/README.md`](windows/README.md) for local build and install steps.
 
@@ -145,12 +145,12 @@ The app itself can show a Dock / taskbar icon, a menu bar / tray icon, or neithe
 ## Updates
 
 On Mac, Quota Arc updates itself. [Sparkle](https://sparkle-project.org) checks
-daily and installs in the background without prompting; Settings says so and can
+daily against this repo's [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases)
+and installs in the background without prompting; Settings says so and can
 switch it off. Every update is EdDSA-signed, so nothing installs that wasn't
 built and signed by the maintainer.
 
-The Windows build does not auto-update. Mac copies that already use Sparkle
-still check hivinz.com. New Mac and Windows downloads are on
+The Windows build does not auto-update. New Mac and Windows downloads are on
 [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases).
 
 ## Building

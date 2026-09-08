@@ -248,10 +248,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             fleet.onRefresh = { [weak store] in store?.refreshNow() }
             fleet.onRefreshProvider = { [weak store] id in store?.refresh(providerID: id) }
             fleet.onUnfold = { [weak store] in
-                // Claude Desktop's history is local and cheap. Re-read it on
-                // every unfold so the ring matches what Windows does when the
-                // notch opens, rather than serving a 15s-old poll.
+                // Claude's CLI/token read and Antigravity's language-server
+                // bridge are both local and cheap — a subprocess or a
+                // loopback call, never a rate-limited cloud endpoint — so
+                // re-reading them on every unfold costs nothing and means the
+                // ring matches what the account actually shows right now,
+                // rather than serving a 15s-old poll. Every other provider
+                // still goes through `refreshIfStale`'s cooldown: those hit
+                // real external APIs, and refreshing on every hover would be
+                // how you get rate limited by your own notch.
                 store?.refresh(providerID: ClaudeProfile.defaultID)
+                store?.refresh(providerID: "gemini")
                 store?.refreshIfStale()
             }
             let claudeHistory = ClaudeDesktopHistoryMonitor()

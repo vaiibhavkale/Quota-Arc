@@ -212,9 +212,9 @@ internal sealed class SettingsWindow : Window
             Margin = new Thickness(0, 4, 0, 0)
         };
         line.Inlines.Add("App designed and developed by ");
-        var link = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run("@hivinz_"))
+        var link = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run("@vaiibhavkale"))
         {
-            NavigateUri = new Uri("https://x.com/hivinz_"),
+            NavigateUri = new Uri("https://x.com/vaiibhavkale"),
             Foreground = SettingsTheme.TextSecondary
         };
         link.RequestNavigate += (_, e) =>

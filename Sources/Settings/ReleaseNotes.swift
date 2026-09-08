@@ -31,6 +31,30 @@ struct ReleaseNote: Equatable {
 enum ReleaseNotes {
     static let all: [ReleaseNote] = [
         ReleaseNote(
+            version: "1.6.3",
+            headline: "Claude readings stay live after the first one, and updates check this repo.",
+            changes: [
+                ReleaseNote.Change(
+                    title: "Claude keeps reading live after it first fills in",
+                    detail: "Only the very first reading comes from Claude Desktop's "
+                          + "history; every refresh after that asks claude /usage or "
+                          + "the account directly, the same as Windows, instead of "
+                          + "repeating a number from whenever Desktop last polled."
+                ),
+                ReleaseNote.Change(
+                    title: "Claude and Antigravity refresh the instant the notch opens",
+                    detail: "Both read from a local process, not a rate-limited API, "
+                          + "so every unfold re-asks them rather than waiting on the "
+                          + "usual cooldown."
+                ),
+                ReleaseNote.Change(
+                    title: "Updates now check this repo's GitHub Releases",
+                    detail: "Signed with this fork's own key, not the upstream "
+                          + "project's."
+                ),
+            ]
+        ),
+        ReleaseNote(
             version: "1.6.2",
             headline: "A universal Mac build, and Claude readings that match Windows.",
             changes: [

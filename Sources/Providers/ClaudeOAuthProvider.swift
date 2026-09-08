@@ -65,6 +65,9 @@ actor ClaudeOAuthProvider: UsageProvider {
     /// would make every token-path assertion depend on whether Desktop is
     /// installed.
     private let loadDesktopSnapshot: @Sendable () -> ProviderSnapshot?
+    /// Whether this instance has ever returned a snapshot. Only the very first
+    /// call gets to trade accuracy for instancy — see `fetchSnapshot`.
+    private var hasAnswered = false
 
     init(profile: ClaudeProfile = .default(),
          session: URLSession = .shared,
@@ -100,12 +103,26 @@ actor ClaudeOAuthProvider: UsageProvider {
         let local = loadDesktopSnapshot()
 
         // Desktop's history is the same percentages the settings page shows,
-        // and needs no keychain. The Windows app already returns it whenever
-        // the token path cannot. On Mac it has to win *before* spawning
-        // `claude /usage`: that process takes up to 20s, and an expired token
-        // afterwards left the ring on "Waiting for the first reading..." while
-        // the numbers were already in the history file.
-        if local == nil, let windows = await cliWindows() {
+        // and needs no keychain, so it draws the ring at once rather than
+        // leaving it on "Waiting for the first reading..." for however long
+        // `claude /usage` takes to spawn. But it is only ever a snapshot from
+        // whenever Desktop last polled — it can sit minutes or hours behind
+        // the live figure claude.ai itself shows. So only the very first
+        // reading takes that trade: once the ring has shown anything, every
+        // refresh after this one prefers a live source, the same as Windows
+        // always has.
+        let isFirstReading = !hasAnswered
+        hasAnswered = true
+        if isFirstReading, let local {
+            Log.usage.debug("\(self.id, privacy: .public): first reading from Claude Desktop history")
+            return local
+        }
+
+        // `claude /usage` next: live, and it needs no keychain access from
+        // this app at all, which is the one thing worth paying a subprocess
+        // for — see `ClaudeUsageCLI`. A warm answer is also free, so this is
+        // no slower than the history file on every refresh but the first.
+        if let windows = await cliWindows() {
             return officialSnapshot(windows: windows)
         }
         if let retryNoEarlierThan, retryNoEarlierThan > Date() {
@@ -113,14 +130,6 @@ actor ClaudeOAuthProvider: UsageProvider {
             let remaining = retryNoEarlierThan.timeIntervalSinceNow
             Log.usage.debug("skipping fetch, backing off for \(remaining, format: .fixed(precision: 0))s")
             throw UsageProviderError.rateLimited(retryAfter: remaining)
-        }
-        // A Desktop reading is enough to draw the ring. Asking the keychain
-        // for a token that may be expired would put a prompt in front of a
-        // number we already have, which is the interruption this fallback
-        // exists to avoid. A token already in hand can still replace it.
-        if let local, credentials == nil {
-            Log.usage.debug("\(self.id, privacy: .public): using Claude Desktop history")
-            return local
         }
         do {
             let snapshot = try await fetch(retryingOnUnauthorized: true)

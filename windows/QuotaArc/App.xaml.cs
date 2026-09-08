@@ -162,7 +162,20 @@ public partial class App : Application
             };
             store.Start();
             fleet.OnRefresh = () => _ = store.RefreshNowAsync();
-            fleet.OnUnfold = () => _ = store.RefreshIfStaleAsync();
+            fleet.OnUnfold = () =>
+            {
+                // Claude's token read and Antigravity's language-server bridge
+                // are both local and cheap — a subprocess or a loopback call,
+                // never a rate-limited cloud endpoint — so re-reading them on
+                // every unfold costs nothing and keeps the ring matching what
+                // the account shows right now, the same as Mac. Every other
+                // provider still goes through RefreshIfStaleAsync's cooldown:
+                // those hit real external APIs, and refreshing on every hover
+                // would be how you get rate limited by your own notch.
+                _ = store.RefreshProviderAsync("claude");
+                _ = store.RefreshProviderAsync("gemini");
+                _ = store.RefreshIfStaleAsync();
+            };
             fleet.OnRefreshProvider = id => _ = store.RefreshProviderAsync(id);
             fleet.OnReposition = offset => preferences.SetOffset(offset, preferences.NotchEdge);
             WatchClaudeDesktop(store);

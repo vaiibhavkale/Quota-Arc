@@ -210,6 +210,50 @@ final class ClaudeOAuthProviderTests: XCTestCase {
         XCTAssertEqual(spawns.value, 0)
     }
 
+    /// The point of `isFirstReading`: Desktop draws the ring at once, but a
+    /// hover minutes later must not keep showing that same stale number when
+    /// `claude /usage` can answer live — otherwise the app never catches up to
+    /// what claude.ai itself shows, which is the whole complaint this fixes.
+    func testASecondReadingPrefersLiveCLIOverStaleDesktopHistory() async throws {
+        let spawns = Counter()
+        let provider = makeProvider(
+            source: CredentialSource(readable: true),
+            cli: Self.cli { spawns.increment(); return Self.cliUsage },
+            desktop: Self.desktopSnapshot(session: 0.99, weekly: 0.99)
+        )
+
+        let first = try await provider.fetchSnapshot()
+        XCTAssertEqual(first.windows[0].usedFraction!, 0.99, accuracy: 0.0001,
+                       "the first reading should still be instant, off Desktop")
+        XCTAssertEqual(spawns.value, 0, "the CLI ran on the very first call")
+
+        let second = try await provider.fetchSnapshot()
+        XCTAssertEqual(spawns.value, 1, "a later refresh never asked the live CLI")
+        XCTAssertEqual(second.windows[0].usedFraction!, 0.38, accuracy: 0.0001,
+                       "a later refresh kept showing Desktop's stale number instead of the live CLI's")
+    }
+
+    /// Same story with no CLI installed: the token path is live too, and a
+    /// hover after the first reading should reach it rather than keep
+    /// repeating whatever Desktop said once, minutes or hours ago.
+    func testASecondReadingFallsBackToTheLiveTokenWhenNoCLIIsInstalled() async throws {
+        StubEndpoint.reset([.init(status: 200, body: Self.usagePayload)])
+        let source = CredentialSource(readable: true)
+        let provider = makeProvider(
+            source: source,
+            desktop: Self.desktopSnapshot(session: 0.99, weekly: 0.99)
+        )
+
+        let first = try await provider.fetchSnapshot()
+        XCTAssertEqual(first.windows[0].usedFraction!, 0.99, accuracy: 0.0001)
+        XCTAssertEqual(StubEndpoint.requestCount, 0, "the endpoint was hit on the very first call")
+
+        let second = try await provider.fetchSnapshot()
+        XCTAssertEqual(StubEndpoint.requestCount, 1, "a later refresh never reached the live endpoint")
+        XCTAssertEqual(second.windows.first!.usedFraction!, 0.42, accuracy: 0.0001,
+                       "a later refresh kept showing Desktop's stale number instead of the live endpoint's")
+    }
+
     private static func desktopSnapshot(session: Double, weekly: Double) -> ProviderSnapshot {
         ProviderSnapshot(
             id: "claude", displayName: "Claude", glyph: .claude,

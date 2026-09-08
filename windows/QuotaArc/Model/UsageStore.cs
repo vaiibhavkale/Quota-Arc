@@ -108,12 +108,26 @@ internal sealed class UsageStore
 
     public Task RefreshNowAsync() => RefreshAllAsync();
 
+    /// The notch unfolding on Mac and Windows alike should feel instant: the
+    /// same behaviour the Mac build now has, so a ring on either platform
+    /// never sits on "Waiting for the first reading..." for the rest of a
+    /// 15-second cooldown just because that cooldown started on the one
+    /// attempt that failed.
     public Task RefreshIfStaleAsync(double minSeconds = 15)
     {
-        if (_lastAttempt is { } t && (DateTime.Now - t).TotalSeconds < minSeconds)
+        var awaitingFirstReading = Snapshots.Any(s => !s.HasReading && !_disconnected.Contains(s.Id));
+        if (!ShouldRefreshOnUnfold(
+                sinceLastAttempt: _lastAttempt is { } t ? (DateTime.Now - t).TotalSeconds : double.MaxValue,
+                minSeconds: minSeconds,
+                awaitingFirstReading: awaitingFirstReading))
+        {
             return Task.CompletedTask;
+        }
         return RefreshAllAsync();
     }
+
+    public static bool ShouldRefreshOnUnfold(double sinceLastAttempt, double minSeconds, bool awaitingFirstReading) =>
+        awaitingFirstReading || sinceLastAttempt >= minSeconds;
 
     public async Task RefreshProviderAsync(string providerId)
     {

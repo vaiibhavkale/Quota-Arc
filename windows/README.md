@@ -46,8 +46,8 @@ powershell -File windows/installer/build.ps1
 
 The files land in `windows/dist/`:
 
-- `QuotaArc-1.6.2.msi` - double-click to install (Program Files, Start Menu, desktop shortcut). Installing again replaces the copy already on the machine. The last page has **Run Quota Arc**.
-- `QuotaArc-1.6.2-portable-win-x64.zip` - unzip and run `QuotaArc.exe`
+- `QuotaArc-1.6.3.msi` - double-click to install (Program Files, Start Menu, desktop shortcut). Installing again replaces the copy already on the machine. The last page has **Run Quota Arc**.
+- `QuotaArc-1.6.3-portable-win-x64.zip` - unzip and run `QuotaArc.exe`
 
 Pushes to `main` attach the Windows installer and the Mac disk image to
 [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases).

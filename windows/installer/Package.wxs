@@ -4,7 +4,7 @@
   <Package
       Name="Quota Arc"
       Manufacturer="Vaibhav"
-      Version="1.6.2.0"
+      Version="1.6.3.0"
       UpgradeCode="8f3c1e7a-6b2d-4f91-9c4a-2e5d8b7a1c03"
       Scope="perMachine"
       Language="1033"

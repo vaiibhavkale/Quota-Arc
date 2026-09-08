@@ -110,3 +110,20 @@ public class UsageStoreScheduleTests
         Assert.True(UsageStore.ShouldRefresh(false, 300, 300));
     }
 }
+
+public class UsageStoreUnfoldTests
+{
+    // The notch unfolding is the one moment someone is looking, so a ring
+    // stuck on "Waiting for the first reading..." matters most right here —
+    // see UsageStore.RefreshIfStaleAsync, and the same fix on Mac.
+    [Fact]
+    public void RefreshesImmediatelyWhenARingHasNoReading() =>
+        Assert.True(UsageStore.ShouldRefreshOnUnfold(sinceLastAttempt: 1, minSeconds: 15, awaitingFirstReading: true));
+
+    [Fact]
+    public void OtherwiseWaitsOutTheCooldown()
+    {
+        Assert.False(UsageStore.ShouldRefreshOnUnfold(sinceLastAttempt: 5, minSeconds: 15, awaitingFirstReading: false));
+        Assert.True(UsageStore.ShouldRefreshOnUnfold(sinceLastAttempt: 15, minSeconds: 15, awaitingFirstReading: false));
+    }
+}

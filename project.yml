@@ -13,8 +13,8 @@ settings:
     # Sources/Info.plist reads both from here — hardcoding them there instead
     # silently pins every build to one version, so no customer ever sees an
     # update. Bump CURRENT_PROJECT_VERSION on every release.
-    MARKETING_VERSION: "1.6.2"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "1.6.3"
+    CURRENT_PROJECT_VERSION: "11"
     # Signed with a stable identity on purpose. The app reads Claude Code's
     # OAuth token out of the login keychain, and the keychain's ACL remembers
     # *which signed binary* was allowed. Ad-hoc or unsigned builds get a new
@@ -69,19 +69,23 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         # --- Sparkle -------------------------------------------------------
-        # Beside the download itself, on hivinz.com. It used to point at a
-        # GitHub Pages URL for a repo that was never created, so every check
-        # got a 404 and Sparkle reported "an error occurred in retrieving
-        # update information" — correctly, since there was nothing there.
+        # `releases/latest/download/<name>` always resolves to the newest
+        # GitHub Release's asset with that name, so pointing the feed here
+        # means "check my GitHub releases" without standing up a separate
+        # host: `make appcast` publishes appcast.xml as a release asset
+        # alongside the dmg (see Makefile).
         #
         # Must stay reachable for as long as any copy is installed: the feed is
         # the only route by which a shipped build can ever be replaced.
-        SUFeedURL: https://hivinz.com/appcast.xml
-        # The public half of the EdDSA key in the login keychain. Sparkle
-        # refuses any update not signed by its private half, so a hijacked feed
-        # or a swapped download cannot install code. Losing the private key
-        # means no existing install can ever be updated again — back it up.
-        SUPublicEDKey: rmUfT5r49nR+3HdkbR5/YYLghfnAi6L49eOk3sIegSk=
+        SUFeedURL: https://github.com/vaiibhavkale/Quota-Arc/releases/latest/download/appcast.xml
+        # The public half of this fork's own EdDSA key in the login keychain
+        # (generated fresh — the upstream project's key has no private half
+        # here, so it could never have verified anything this fork signs).
+        # Sparkle refuses any update not signed by its private half, so a
+        # hijacked feed or a swapped download cannot install code. Losing the
+        # private key means no existing install can ever be updated again —
+        # back it up.
+        SUPublicEDKey: Y33fJWT3C++vwd+qESsh50pLCCB9odUMEvMgCZq91sM=
         # Set explicitly so Sparkle never asks on first launch. Left unset, it
         # shows a "check for updates automatically?" prompt, which is exactly
         # the permission this is meant to avoid.

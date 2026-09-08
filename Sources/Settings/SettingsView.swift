@@ -628,7 +628,7 @@ struct SettingsView: View {
             Section {
                 HStack(spacing: 4) {
                     Text("App designed and developed by")
-                    Link("@hivinz_", destination: SettingsView.authorURL)
+                    Link("@vaiibhavkale", destination: SettingsView.authorURL)
                         .foregroundStyle(authorLinkHovered
                                          ? preferences.accentColor.color : .primary)
                         .underline(authorLinkHovered)
@@ -663,7 +663,7 @@ struct SettingsView: View {
     }
 
 
-    static let authorURL = URL(string: "https://x.com/hivinz_")!
+    static let authorURL = URL(string: "https://x.com/vaiibhavkale")!
 
     /// The band across the top of the panel that the traffic lights sit in.
     ///

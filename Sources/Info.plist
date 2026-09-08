@@ -27,9 +27,9 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://hivinz.com/appcast.xml</string>
+	<string>https://github.com/vaiibhavkale/Quota-Arc/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>rmUfT5r49nR+3HdkbR5/YYLghfnAi6L49eOk3sIegSk=</string>
+	<string>Y33fJWT3C++vwd+qESsh50pLCCB9odUMEvMgCZq91sM=</string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
 </dict>
