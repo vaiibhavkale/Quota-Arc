@@ -893,7 +893,7 @@ final class StatusMenuTests: XCTestCase {
         XCTAssertTrue(titles[0].contains("20 hr 21 min ago"), titles[0])
         XCTAssertTrue(titles[1].contains("Weekly limit"), titles[1])
         XCTAssertTrue(titles[1].contains("29% Used · 71% left"), titles[1])
-        XCTAssertTrue(titles.contains("Refresh all"))
+        XCTAssertTrue(titles.contains("Refresh all tokens"))
         XCTAssertTrue(titles.contains("Settings…"))
         XCTAssertTrue(titles.contains("Quit Quota Arc"))
         // The header re-reads its own provider.
@@ -1042,6 +1042,17 @@ final class ReauthorizeTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 150_000_000)
         XCTAssertEqual(stub.forgotten, 0)
         XCTAssertEqual(stub.fetches, 0)
+    }
+
+    /// Dock click and Settings' "Refresh all tokens" have to drop every
+    /// cached login, or a switch in Cursor or Claude never shows up.
+    func testRefreshAllTokensDropsEveryHeldCredential() async {
+        let stub = Stub()
+        let store = store(stub)
+        store.refreshAllTokens()
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(stub.forgotten, 1)
+        XCTAssertEqual(stub.fetches, 1)
     }
 }
 

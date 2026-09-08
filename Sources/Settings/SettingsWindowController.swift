@@ -18,6 +18,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let signIn: (String) -> Bool
     private let switchAccount: (String) -> Bool
     private let retry: (String) -> Void
+    private let refreshAll: () -> Void
     private let updater: Updater
 
     init(preferences: Preferences,
@@ -26,9 +27,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
          signOut: @escaping (String) -> Void,
          signIn: @escaping (String) -> Bool,
          switchAccount: @escaping (String) -> Bool,
-         retry: @escaping (String) -> Void) {
+         retry: @escaping (String) -> Void,
+         refreshAll: @escaping () -> Void) {
         self.switchAccount = switchAccount
         self.retry = retry
+        self.refreshAll = refreshAll
         self.updater = updater
         self.preferences = preferences
         self.providers = providers
@@ -107,6 +110,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 window.center()
             }
             surface(window)
+            refreshAll()
             return
         }
 
@@ -143,6 +147,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                                    signIn: signIn,
                                    switchAccount: switchAccount,
                                    retry: retry,
+                                   refreshAll: refreshAll,
                                    updater: updater)
         )
         window.center()
@@ -150,5 +155,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         self.window = window
         layoutTrafficLights(in: window)
         surface(window)
+        refreshAll()
     }
 }

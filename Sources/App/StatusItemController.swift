@@ -77,7 +77,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
         menu.addItem(.separator())
         menu.addItem(
-            withTitle: "Refresh all", action: #selector(refreshAll), keyEquivalent: "r"
+            withTitle: "Refresh all tokens", action: #selector(refreshAll), keyEquivalent: "r"
         ).target = self
         menu.addItem(
             withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ","

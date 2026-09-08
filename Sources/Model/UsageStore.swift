@@ -213,6 +213,25 @@ final class UsageStore: ObservableObject {
         }
     }
 
+    /// Drop cached credentials and re-read every connected provider.
+    ///
+    /// Switching account happens in Cursor, Claude, Codex or Antigravity, not
+    /// here. A plain refresh is served from the in-memory token, so the new
+    /// login would sit unseen until that cache aged out. Forgetting first is
+    /// how Settings' "Refresh all tokens" and a Dock click pick up the account
+    /// that is actually signed in right now.
+    func refreshAllTokens(minSeconds: TimeInterval = 0) {
+        guard !isRefreshing else { return }
+        if minSeconds > 0, let last = lastAttempt,
+           Date().timeIntervalSince(last) < minSeconds {
+            return
+        }
+        for provider in providers where !disconnected.contains(provider.id) {
+            provider.forgetCachedCredential()
+        }
+        refreshNow()
+    }
+
     /// Re-read when the notch opens, unless a fetch just ran.
     ///
     /// Hovering is the moment the numbers on screen are about to be looked at,

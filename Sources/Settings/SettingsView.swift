@@ -133,6 +133,10 @@ struct SettingsView: View {
     /// Re-reads a provider's credential. For a declined keychain prompt that is
     /// the whole remedy: asking again is what puts the prompt back on screen.
     let retry: (String) -> Void
+    /// Drop cached tokens and re-read every connected tool. Switching account
+    /// happens in Cursor or Claude, so this is how the sheet picks up the one
+    /// that is signed in right now.
+    var refreshAll: () -> Void = {}
     @ObservedObject var updater: Updater
 
     var body: some View {
@@ -319,7 +323,7 @@ struct SettingsView: View {
             // Split in two, because ordering only means anything for the
             // first group: a provider switched off has no ring in the notch,
             // so dragging it was arranging something that is not on screen.
-            Section("Connected") {
+            Section {
                 if needsSetup { setupNote }
                 ForEach(connected) { account in
                     AccountRow(provider: account, preferences: preferences,
@@ -344,17 +348,24 @@ struct SettingsView: View {
                         .foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                // Beside the switches it explains, not stranded at the end of
-                // the page.
                 Text("Quota Arc never signs in — each reading is borrowed from the "
                      + "tool that already holds the account. Signing out here stops "
                      + "the credential being read and forgets the numbers, but leaves "
-                     + "you signed in to that tool. macOS asks once per tool the "
-                     + "first time, and again whenever you sign in to a different "
-                     + "account; Always Allow keeps it quiet.")
+                     + "you signed in to that tool. Use Refresh token after switching "
+                     + "accounts in Cursor, Claude, Codex or Antigravity.")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
+            } header: {
+                HStack {
+                    Text("Connected")
+                    Spacer()
+                    Button("Refresh all tokens") { refreshAll() }
+                        .font(.caption)
+                        .disabled(connected.isEmpty)
+                        .help("Drops cached logins and re-reads every connected tool, "
+                              + "so a switch in Cursor or Claude shows up here.")
+                }
             }
 
             // Absent rather than empty when everything is on: a titled, empty
@@ -1048,6 +1059,11 @@ private struct AccountRow: View {
                         .controlSize(.small)
                         .help("Asks macOS for \(provider.name)'s saved login again. "
                               + "Choose Always Allow and it will stop asking.")
+                } else if isConnected {
+                    Button("Refresh token") { retry(provider.id) }
+                        .controlSize(.small)
+                        .help("Drops the cached login and re-reads \(provider.name), "
+                              + "so a switch of account in that tool shows up here.")
                 }
 
                 if isConnected, let destination {

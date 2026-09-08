@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Turns the monitors' running commentary into the one event worth
     /// interrupting for: an agent that has just stopped working.
     private var completions = SessionCompletionWatcher()
+    /// First activation is launch, which already fetched. Later ones are the
+    /// user coming back from Cursor or Claude, which is when the cached token
+    /// is the one that is wrong.
+    private var hasBecomeActive = false
 
     /// The unit bundle is hosted by this app, so `xcodebuild test` launches it
     /// for real. Without this guard every test run put a live request on the
@@ -114,7 +118,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 switchAccount: { [weak store] in
                     store?.openAccountSource(providerID: $0) ?? false
                 },
-                retry: { [weak store] in store?.reauthorize(providerID: $0) }
+                retry: { [weak store] in store?.reauthorize(providerID: $0) },
+                refreshAll: { [weak store] in store?.refreshAllTokens() }
             )
             fleet.onOpenSettings = { [weak settings] in settings?.show() }
             self.settings = settings
@@ -145,7 +150,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let statusItem = StatusItemController { [weak settings] in settings?.show() }
             self.statusItem = statusItem
             statusItem.onRefreshProvider = { [weak store] id in store?.refresh(providerID: id) }
-            statusItem.onRefreshAll = { [weak store] in store?.refreshNow() }
+            statusItem.onRefreshAll = { [weak store] in store?.refreshAllTokens() }
 
             preferences.$appPresence
                 .receive(on: RunLoop.main)
@@ -350,12 +355,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ///
     /// With no dock icon, no menu bar item and no notch on screen, there is
     /// otherwise nothing left to click — choosing Hide would be a one-way door.
-    /// Launching the app again while it is already running lands here, so
-    /// opening it from Applications or Spotlight reopens settings.
+    /// Opening the app again while it is already running lands here, so
+    /// clicking the Dock tile re-reads every connected tool - Cursor, Claude,
+    /// Codex, Antigravity - and reopens settings. Switching account happens in
+    /// those apps, and a cached token would keep showing the previous one.
     func applicationShouldHandleReopen(_ sender: NSApplication,
                                        hasVisibleWindows: Bool) -> Bool {
         settings?.show()
         return true
+    }
+
+    /// Coming back to the app - Dock click or Cmd-Tab - is the moment the
+    /// numbers on screen are about to be looked at, and the moment the user
+    /// just left Cursor or Claude. Skip the first activation: launch already
+    /// fetched.
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard !isRunningTests else { return }
+        if !hasBecomeActive {
+            hasBecomeActive = true
+            return
+        }
+        store?.refreshAllTokens(minSeconds: 5)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

@@ -30,6 +30,10 @@ frames.First(f => f.Width == 256).Save(png256, ImageFormat.Png);
 WriteInstallerBanner(framed, Path.Combine(destDir, "WixUIBannerBmp.bmp"));
 WriteInstallerDialog(framed, Path.Combine(destDir, "WixUIDialogBmp.bmp"));
 
+var macIconDir = Path.GetFullPath(Path.Combine(destDir, "..", "..",
+    "Sources", "Assets.xcassets", "AppIcon.appiconset"));
+WriteMacAppIcons(framed, macIconDir);
+
 foreach (var frame in frames) frame.Dispose();
 Console.WriteLine(destIco);
 
@@ -186,6 +190,29 @@ static void Qualify(Graphics g)
     g.SmoothingMode = SmoothingMode.HighQuality;
     g.CompositingMode = CompositingMode.SourceOver;
     g.CompositingQuality = CompositingQuality.HighQuality;
+}
+
+static void WriteMacAppIcons(Bitmap mark, string dir)
+{
+    if (!Directory.Exists(dir)) return;
+    (string Name, int Size)[] files =
+    [
+        ("icon_16x16.png", 16),
+        ("icon_16x16@2x.png", 32),
+        ("icon_32x32.png", 32),
+        ("icon_32x32@2x.png", 64),
+        ("icon_128x128.png", 128),
+        ("icon_128x128@2x.png", 256),
+        ("icon_256x256.png", 256),
+        ("icon_256x256@2x.png", 512),
+        ("icon_512x512.png", 512),
+        ("icon_512x512@2x.png", 1024),
+    ];
+    foreach (var (name, size) in files)
+    {
+        using var frame = Scale(mark, size, fill: 1);
+        frame.Save(Path.Combine(dir, name), ImageFormat.Png);
+    }
 }
 
 static Bitmap Scale(Bitmap source, int size, double fill)
