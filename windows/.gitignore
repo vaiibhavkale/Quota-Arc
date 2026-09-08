@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+installer/payload/
+installer/bin/
+installer/obj/
+installer/MakeIcon/bin/
+installer/MakeIcon/obj/
+*.user

@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Mac tests
+    # macOS 26, because that is what the app targets. An older image ships an
+    # Xcode that cannot read the project at all — `objectVersion 77` is a
+    # format it does not know — long before it gets as far as the macOS 26
+    # deployment target or the Liquid Glass APIs the settings panel uses.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      # Printed rather than assumed: when this job fails on a runner image
+      # change, the toolchain is the first thing worth seeing.
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun --show-sdk-version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # Unsigned on purpose: no identity exists on a runner, and the tests
+      # read fixtures rather than keychains — see `make test-ci`.
+      - name: Run unit tests
+        run: make test-ci
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Test
+        run: dotnet test windows/QuotaArc.sln -c Release --nologo
+
+      - name: Build installer
+        run: powershell -File windows/installer/build.ps1
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $csproj = Get-Content windows/QuotaArc/QuotaArc.csproj -Raw
+          if ($csproj -notmatch "<Version>([^<]+)</Version>") {
+            throw "could not read Version from QuotaArc.csproj"
+          }
+          "version=$($Matches[1])" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          path: |
+            windows/dist/QuotaArc-*.msi
+            windows/dist/QuotaArc-*.zip
+          if-no-files-found: error
+
+  release:
+    name: GitHub Release
+    needs: windows
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-setup
+          path: dist
+
+      - name: Publish Windows build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.windows.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          msi="dist/QuotaArc-${VERSION}.msi"
+          zip="dist/QuotaArc-${VERSION}-portable-win-x64.zip"
+          test -f "$msi"
+          test -f "$zip"
+          sha="${GITHUB_SHA:0:7}"
+          notes="$(cat <<EOF
+          Quota Arc ${VERSION} for Windows.
+
+          - **QuotaArc-${VERSION}.msi** — installer. Installing again replaces the copy already on the machine.
+          - **QuotaArc-${VERSION}-portable-win-x64.zip** — unzip and run QuotaArc.exe.
+
+          Built from \`${sha}\` on \`main\`.
+          EOF
+          )"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$msi" "$zip" --clobber
+            gh release edit "$tag" --title "Quota Arc ${VERSION}" --notes "$notes" --latest
+          else
+            gh release create "$tag" "$msi" "$zip" --title "Quota Arc ${VERSION}" --notes "$notes" --latest
+          fi

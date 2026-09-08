@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\windows\QuotaArc.ico</ApplicationIcon>
+    <RootNamespace>QuotaArc</RootNamespace>
+    <AssemblyName>QuotaArc</AssemblyName>
+    <Version>1.6.1</Version>
+    <FileVersion>1.6.1.0</FileVersion>
+    <AssemblyVersion>1.6.1.0</AssemblyVersion>
+    <InformationalVersion>1.6.1</InformationalVersion>
+    <Authors>Vaibhav</Authors>
+    <Company>Vaibhav</Company>
+    <Product>Quota Arc</Product>
+    <Copyright>Copyright (c) Vaibhav</Copyright>
+    <Description>Pins coding-assistant usage limits to a Windows screen edge.</Description>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Drawing" />
+    <Using Remove="System.Windows.Forms" />
+    <Using Include="System.Net.Http" />
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\assets\windows\QuotaArc.ico">
+      <Link>QuotaArc.ico</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\assets\windows\QuotaArc-logo.jpg">
+      <Link>QuotaArc-logo.jpg</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="QuotaArc.Tests" />
+  </ItemGroup>
+
+</Project>

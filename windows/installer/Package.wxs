@@ -1,0 +1,116 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package
+      Name="Quota Arc"
+      Manufacturer="Vaibhav"
+      Version="1.6.1.0"
+      UpgradeCode="8f3c1e7a-6b2d-4f91-9c4a-2e5d8b7a1c03"
+      Scope="perMachine"
+      Language="1033"
+      InstallerVersion="500">
+    <SummaryInformation Description="Pins coding-assistant usage limits to a Windows screen edge." />
+    <MajorUpgrade
+        AllowSameVersionUpgrades="yes"
+        Schedule="afterInstallInitialize"
+        DowngradeErrorMessage="A newer version of Quota Arc is already installed. Uninstall it first." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="AppIcon" SourceFile="..\..\assets\windows\QuotaArc.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/vaiibhavkale/Quota-Arc" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/vaiibhavkale/Quota-Arc" />
+    <Property Id="ARPNOREPAIR" Value="yes" />
+
+    <util:CloseApplication
+        Id="CloseQuotaArc"
+        Target="QuotaArc.exe"
+        Description="Quota Arc is still running. Setup will close it so this build can replace it."
+        CloseMessage="yes"
+        EndSessionMessage="yes"
+        RebootPrompt="no"
+        TerminateProcess="1"
+        Timeout="5000" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Quota Arc" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppShortcutFolder" Name="Quota Arc" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="!(bindpath.payload)\**" />
+    </ComponentGroup>
+
+    <Component Id="StartMenuShortcut" Directory="AppShortcutFolder" Guid="a1c2e3f4-5b6d-4789-8a0b-1c2d3e4f5a6b">
+      <Shortcut
+          Id="QuotaArcShortcut"
+          Name="Quota Arc"
+          Description="Open Quota Arc"
+          Target="[INSTALLFOLDER]QuotaArc.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon" />
+      <RemoveFolder Id="AppShortcutFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\QuotaArc"
+          Name="InstallDir"
+          Type="string"
+          Value="[INSTALLFOLDER]"
+          KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder" Guid="b7e4c1a0-9d2f-4e18-8c6b-3a51f0d84e27">
+      <Shortcut
+          Id="QuotaArcDesktopShortcut"
+          Name="Quota Arc"
+          Description="Open Quota Arc"
+          Target="[INSTALLFOLDER]QuotaArc.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\QuotaArc"
+          Name="DesktopShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <Feature Id="Main" Title="Quota Arc" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Run Quota Arc" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="..\..\assets\windows\WixUIBannerBmp.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="..\..\assets\windows\WixUIDialogBmp.bmp" />
+
+    <CustomAction
+        Id="LaunchQuotaArc"
+        Directory="INSTALLFOLDER"
+        ExeCommand="&quot;[INSTALLFOLDER]QuotaArc.exe&quot; --welcome"
+        Execute="immediate"
+        Impersonate="yes"
+        Return="asyncNoWait" />
+
+    <ui:WixUI Id="WixUI_Minimal" />
+    <UI>
+      <Publish
+          Dialog="ExitDialog"
+          Control="Finish"
+          Event="DoAction"
+          Value="LaunchQuotaArc"
+          Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT REMOVE" />
+    </UI>
+
+    <InstallExecuteSequence>
+      <Custom Action="LaunchQuotaArc" After="InstallFinalize" Condition="NOT REMOVE AND UILevel &lt; 5" />
+    </InstallExecuteSequence>
+  </Package>
+</Wix>

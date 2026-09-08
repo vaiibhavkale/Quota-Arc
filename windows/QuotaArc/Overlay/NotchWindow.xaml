@@ -1,0 +1,17 @@
+<Window x:Class="QuotaArc.Overlay.NotchWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        UseLayoutRounding="False"
+        ShowActivated="False"
+        Focusable="False"
+        Title="Quota Arc">
+    <Grid>
+        <ContentPresenter x:Name="Host"/>
+    </Grid>
+</Window>
