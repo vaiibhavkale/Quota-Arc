@@ -49,7 +49,7 @@ The files land in `windows/dist/`:
 - `QuotaArc-1.6.1.msi` - double-click to install (Program Files, Start Menu, desktop shortcut). Installing again replaces the copy already on the machine. The last page has **Run Quota Arc**.
 - `QuotaArc-1.6.1-portable-win-x64.zip` - unzip and run `QuotaArc.exe`
 
-Pushes to `main` run the same script in GitHub Actions and attach those files to
+Pushes to `main` attach the Windows installer and the Mac disk image to
 [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases).
 
 The Start Menu, desktop, exe, tray, and Apps list all use `assets/windows/QuotaArc.ico`,

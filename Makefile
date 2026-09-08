@@ -67,6 +67,31 @@ test-ci: gen
 		-configuration Debug test \
 		CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
 
+# Unsigned Release disk image for GitHub Actions. A Developer ID is not on
+# the runner, so this is not notarized. `make release` on the maintainer
+# machine is still what produces a Gatekeeper-clean build.
+.PHONY: dmg-ci
+CI_DERIVED := build/ci
+dmg-ci: gen
+	rm -rf $(RELEASE_DIR) $(CI_DERIVED)
+	mkdir -p $(RELEASE_DIR)/stage
+	mkdir -p build
+	touch build/.metadata_never_index
+	xcodebuild -project $(PROJECT) -scheme $(SCHEME) \
+		-destination 'generic/platform=macOS' \
+		-configuration Release \
+		-derivedDataPath $(CI_DERIVED) \
+		CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+		build
+	test -d $(CI_DERIVED)/Build/Products/Release/$(APP_NAME).app
+	cp -R $(CI_DERIVED)/Build/Products/Release/$(APP_NAME).app $(RELEASE_DIR)/stage/
+	ln -s /Applications $(RELEASE_DIR)/stage/Applications
+	rm -f $(DMG)
+	hdiutil create -volname "$(APP_NAME)" -srcfolder $(RELEASE_DIR)/stage \
+		-ov -format UDZO $(DMG)
+	rm -rf $(RELEASE_DIR)/stage
+	@echo "CI disk image: $(DMG)"
+
 run: build
 	@APP=$$(xcodebuild -project $(PROJECT) -scheme $(SCHEME) -destination '$(DEST)' \
 		-configuration Debug -showBuildSettings 2>/dev/null \

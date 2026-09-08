@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Mac tests
+  mac:
+    name: Mac
     # macOS 26, because that is what the app targets. An older image ships an
     # Xcode that cannot read the project at all — `objectVersion 77` is a
     # format it does not know — long before it gets as far as the macOS 26
@@ -33,6 +33,15 @@ jobs:
       # read fixtures rather than keychains — see `make test-ci`.
       - name: Run unit tests
         run: make test-ci
+
+      - name: Build disk image
+        run: make dmg-ci
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-setup
+          path: build/release/QuotaArc.dmg
+          if-no-files-found: error
 
   windows:
     name: Windows
@@ -72,7 +81,7 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: windows
+    needs: [mac, windows]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -85,7 +94,12 @@ jobs:
           name: windows-setup
           path: dist
 
-      - name: Publish Windows build
+      - uses: actions/download-artifact@v4
+        with:
+          name: mac-setup
+          path: dist
+
+      - name: Publish Mac and Windows builds
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.windows.outputs.version }}
@@ -94,21 +108,25 @@ jobs:
           tag="v${VERSION}"
           msi="dist/QuotaArc-${VERSION}.msi"
           zip="dist/QuotaArc-${VERSION}-portable-win-x64.zip"
+          dmg="dist/QuotaArc-${VERSION}.dmg"
           test -f "$msi"
           test -f "$zip"
+          test -f dist/QuotaArc.dmg
+          cp dist/QuotaArc.dmg "$dmg"
           sha="${GITHUB_SHA:0:7}"
           notes="$(cat <<EOF
-          Quota Arc ${VERSION} for Windows.
+          Quota Arc ${VERSION} for Windows and Mac.
 
-          - **QuotaArc-${VERSION}.msi** — installer. Installing again replaces the copy already on the machine.
-          - **QuotaArc-${VERSION}-portable-win-x64.zip** — unzip and run QuotaArc.exe.
+          - **QuotaArc-${VERSION}.msi** - Windows installer. Installing again replaces the copy already on the machine.
+          - **QuotaArc-${VERSION}-portable-win-x64.zip** - Windows portable. Unzip and run QuotaArc.exe.
+          - **QuotaArc-${VERSION}.dmg** - Mac disk image. Drag Quota Arc to Applications.
 
           Built from \`${sha}\` on \`main\`.
           EOF
           )"
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$msi" "$zip" --clobber
+            gh release upload "$tag" "$msi" "$zip" "$dmg" --clobber
             gh release edit "$tag" --title "Quota Arc ${VERSION}" --notes "$notes" --latest
           else
-            gh release create "$tag" "$msi" "$zip" --title "Quota Arc ${VERSION}" --notes "$notes" --latest
+            gh release create "$tag" "$msi" "$zip" "$dmg" --title "Quota Arc ${VERSION}" --notes "$notes" --latest
           fi

@@ -33,11 +33,12 @@ The Windows app — WPF, branded Quota Arc — lives in [`windows/`](windows/REA
 The 1.6.0 customization (ring order, displays, accent, threshold alerts,
 session announcements) is included. Hovering the notch re-reads live usage.
 
-Every push to `main` builds the installer and publishes it on
-[Releases](https://github.com/vaiibhavkale/Quota-Arc/releases):
+Every push to `main` builds the Windows installer, the Mac disk image, and
+publishes both on [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases):
 
-- Installer: `QuotaArc-1.6.1.msi`
-- Portable: `QuotaArc-1.6.1-portable-win-x64.zip`
+- Windows installer: `QuotaArc-1.6.1.msi`
+- Windows portable: `QuotaArc-1.6.1-portable-win-x64.zip`
+- Mac disk image: `QuotaArc-1.6.1.dmg`
 
 See [`windows/README.md`](windows/README.md) for local build and install steps.
 
@@ -148,7 +149,8 @@ daily and installs in the background without prompting; Settings says so and can
 switch it off. Every update is EdDSA-signed, so nothing installs that wasn't
 built and signed by the maintainer.
 
-The Windows build does not auto-update. Install a newer MSI from
+The Windows build does not auto-update. Mac copies that already use Sparkle
+still check hivinz.com. New Mac and Windows downloads are on
 [Releases](https://github.com/vaiibhavkale/Quota-Arc/releases).
 
 ## Building
