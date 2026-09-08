@@ -10,15 +10,22 @@ namespace QuotaArc.Tests;
 public class CursorActivityMonitorTests
 {
     /// The instant every fixture's `unfinishedRunAt` names.
-    private static readonly DateTime RunAt = DateTimeOffset.FromUnixTimeMilliseconds(1787981829823).LocalDateTime;
+    private const long RunAtMillis = 1787981829823;
+    private static readonly DateTime RunAt = DateTimeOffset.FromUnixTimeMilliseconds(RunAtMillis).LocalDateTime;
 
     private static long Millis(DateTime date) => new DateTimeOffset(date).ToUnixTimeMilliseconds();
 
     /// One `composerHeaders` row. Built rather than pasted so a fixture differs
     /// from its neighbour only where the test means it to.
+    ///
+    /// `run` takes milliseconds rather than a `DateTime` so its default can be
+    /// a real compile-time constant: a `DateTime?` default of `RunAt` is not
+    /// one, and coalescing a null default onto it in the body would have made
+    /// `run: null` — "no unfinishedRunAt field at all", the finished-run case —
+    /// indistinguishable from "not specified".
     private static string Header(
         string? id = "abc",
-        DateTime? run = null,
+        long? run = RunAtMillis,
         DateTime? checkpoint = null,
         DateTime? lastUpdated = null,
         DateTime? created = null,
@@ -27,10 +34,9 @@ public class CursorActivityMonitorTests
         bool? blocking = null,
         bool? plan = null)
     {
-        run ??= RunAt;
         var head = new Dictionary<string, object?>();
         if (id is not null) head["composerId"] = id;
-        if (run is { } r) head["unfinishedRunAt"] = Millis(r);
+        if (run is { } r) head["unfinishedRunAt"] = r;
         if (checkpoint is { } c) head["conversationCheckpointLastUpdatedAt"] = Millis(c);
         if (lastUpdated is { } lu) head["lastUpdatedAt"] = Millis(lu);
         if (created is { } cr) head["createdAt"] = Millis(cr);
@@ -239,22 +245,31 @@ public class CursorActivityMonitorTests
         var newer = RunAt.AddSeconds(100);
         var path = MakeStore(
         [
-            (Header(id: "older", run: older, checkpoint: older), 0),
-            (Header(id: "newer", run: newer, checkpoint: newer), 0),
-            (Header(id: "filed", run: newer, checkpoint: newer), 1),
+            (Header(id: "older", run: Millis(older), checkpoint: older), 0),
+            (Header(id: "newer", run: Millis(newer), checkpoint: newer), 0),
+            (Header(id: "filed", run: Millis(newer), checkpoint: newer), 1),
         ]);
         try
         {
             var found = CursorActivityMonitor.Read(path, DistantPast, TimeSpan.FromMinutes(10), newer.AddSeconds(1));
             Assert.Equal(["cursor.newer", "cursor.older"], found.Select(s => s.Id));
         }
-        finally { File.Delete(path); }
+        finally
+        {
+            // Mirrors SqliteStore.Open's own Pooling=false: left pooled, the
+            // native handle from this write connection can outlive its
+            // Dispose() on Windows, and the delete below fails with the file
+            // "used by another process" even though nothing still references it.
+            SqliteConnection.ClearAllPools();
+            try { File.Delete(path); } catch (IOException) { /* AV or a lingering handle; harmless in %TEMP% */ }
+        }
     }
 
     private static string MakeStore((string json, int archived)[] rows)
     {
         var path = Path.Combine(Path.GetTempPath(), $"cursor-{Guid.NewGuid()}.sqlite");
-        using var db = new SqliteConnection($"Data Source={path}");
+        var connectionString = new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString();
+        using var db = new SqliteConnection(connectionString);
         db.Open();
         using (var create = db.CreateCommand())
         {
